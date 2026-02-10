@@ -33,12 +33,7 @@ function ChatWithParams() {
         const data = await res.json();
         setMessages(data);
         setShowSidebar(false);
-        
-        const session = sessions.find(s => s.session_id === id);
-        if (session?.settings) {
-            setCurrentSettings(session.settings);
-        }
-    }, [sessions]);
+    }, []);
 
     const fetchSessions = useCallback(async (userId: string) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
@@ -49,6 +44,11 @@ function ChatWithParams() {
             const firstSessionId = data.sessions[0].session_id;
             setSessionId(firstSessionId);
             loadSession(firstSessionId, userId);
+            
+            // Set settings if available
+            if (data.sessions[0].settings) {
+                setCurrentSettings(data.sessions[0].settings);
+            }
         } else {
             setIsNewChat(true);
             setIsSettingsModalOpen(true);
@@ -72,11 +72,10 @@ function ChatWithParams() {
     // Handle session parameter from URL
     useEffect(() => {
         const sessionParam = searchParams.get('session');
-        if (sessionParam && userId) {
-            setSessionId(sessionParam);
+        if (sessionParam && userId && sessionParam !== sessionId) {
             loadSession(sessionParam, userId);
         }
-    }, [searchParams, userId, loadSession]);
+    }, [searchParams, userId, loadSession, sessionId]);
 
     const startNewSession = async () => {
         setIsNewChat(true);
