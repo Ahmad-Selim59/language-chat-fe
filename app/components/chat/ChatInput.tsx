@@ -5,7 +5,7 @@ interface ChatInputProps {
     setMessage: (message: string) => void;
     sendMessage: () => void;
     loading: boolean;
-    keyboardHeight: number;
+    keyboardHeight?: number;
 }
 
 export default function ChatInput({
@@ -13,7 +13,7 @@ export default function ChatInput({
     setMessage,
     sendMessage,
     loading,
-    keyboardHeight
+    keyboardHeight = 0
 }: ChatInputProps) {
     return (
         <div

@@ -59,7 +59,7 @@ export default function Home() {
     return (
         <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-[#1a1a1a]">
             <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-                <h1 className="text-4xl font-bold text-center mb-8 text-[#ececf1]">Welcome to son of anton the third</h1>
+                <h1 className="text-4xl font-bold text-center mb-8 text-[#ececf1]">Welcome to son of anton the fourth</h1>
                 <p className="text-center text-lg mb-8 text-[#a3a3a3]">
                     Your personal AI genie.
                 </p>

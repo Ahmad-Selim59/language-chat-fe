@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Menu, MessageSquare, Brain, Settings } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Menu, MessageSquare, Settings } from 'lucide-react';
 
 interface Session {
     session_id: string;
@@ -40,7 +39,6 @@ export default function Sidebar({
     const [editingTitle, setEditingTitle] = useState<string | null>(null);
     const [editedTitle, setEditedTitle] = useState('');
     const menuRef = useRef<HTMLDivElement | null>(null);
-    const router = useRouter();
 
     const handleUpdateTitle = async (id: string) => {
         if (!editedTitle.trim()) {

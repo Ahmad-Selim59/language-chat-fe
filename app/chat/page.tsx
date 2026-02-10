@@ -23,10 +23,22 @@ function ChatWithParams() {
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [currentSettings, setCurrentSettings] = useState<ChatSettings | undefined>(undefined);
     const [isNewChat, setIsNewChat] = useState(false);
+
+    const loadSession = useCallback(async (id: string, userId: string) => {
+        setSessionId(id);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}&user_id=${userId}`);
+        const data = await res.json();
+        setMessages(data);
+        setShowSidebar(false);
+        
+        const session = sessions.find(s => s.session_id === id);
+        if (session?.settings) {
+            setCurrentSettings(session.settings);
+        }
+    }, [sessions]);
 
     const fetchSessions = useCallback(async (userId: string) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
@@ -41,7 +53,7 @@ function ChatWithParams() {
             setIsNewChat(true);
             setIsSettingsModalOpen(true);
         }
-    }, []);
+    }, [loadSession]);
 
     useEffect(() => {
         const fetchUserIdAndSessions = async () => {
@@ -64,52 +76,7 @@ function ChatWithParams() {
             setSessionId(sessionParam);
             loadSession(sessionParam, userId);
         }
-    }, [searchParams, userId]);
-
-    // Handle mobile keyboard appearing/disappearing
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth <= 768) {
-                const viewportHeight = window.visualViewport?.height || window.innerHeight;
-                const windowHeight = window.innerHeight;
-                const heightDifference = windowHeight - viewportHeight;
-
-                if (heightDifference > 150 && heightDifference < windowHeight * 0.6) {
-                    const maxKeyboardHeight = Math.min(heightDifference, windowHeight * 0.5);
-                    setKeyboardHeight(maxKeyboardHeight);
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    setKeyboardHeight(0);
-                    document.body.style.overflow = '';
-                }
-            } else {
-                setKeyboardHeight(0);
-                document.body.style.overflow = '';
-            }
-        };
-
-        window.addEventListener('resize', handleResize);
-        window.visualViewport?.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            window.visualViewport?.removeEventListener('resize', handleResize);
-            document.body.style.overflow = '';
-        };
-    }, []);
-
-    const loadSession = async (id: string, userId: string) => {
-        setSessionId(id);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}&user_id=${userId}`);
-        const data = await res.json();
-        setMessages(data);
-        setShowSidebar(false);
-        
-        const session = sessions.find(s => s.session_id === id);
-        if (session?.settings) {
-            setCurrentSettings(session.settings);
-        }
-    };
+    }, [searchParams, userId, loadSession]);
 
     const startNewSession = async () => {
         setIsNewChat(true);
@@ -239,14 +206,13 @@ function ChatWithParams() {
                     if (showSidebar) setShowSidebar(false);
                 }}
             >
-                <ChatMessages messages={messages} keyboardHeight={keyboardHeight} />
+                <ChatMessages messages={messages} />
                 <div className="relative z-0">
                     <ChatInput
                         message={message}
                         setMessage={setMessage}
                         sendMessage={sendMessage}
                         loading={loading}
-                        keyboardHeight={keyboardHeight}
                     />
                 </div>
             </section>
