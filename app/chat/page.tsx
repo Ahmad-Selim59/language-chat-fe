@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/chat/Sidebar';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
+import ChatSettingsModal, { ChatSettings } from '../components/chat/ChatSettingsModal';
 
 interface Session {
     session_id: string;
     title: string;
+    settings?: ChatSettings;
 }
 
 function ChatWithParams() {
@@ -22,6 +24,9 @@ function ChatWithParams() {
     const [loading, setLoading] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [currentSettings, setCurrentSettings] = useState<ChatSettings | undefined>(undefined);
+    const [isNewChat, setIsNewChat] = useState(false);
 
     const fetchSessions = useCallback(async (userId: string) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
@@ -33,11 +38,8 @@ function ChatWithParams() {
             setSessionId(firstSessionId);
             loadSession(firstSessionId, userId);
         } else {
-            const newId = `${userId}-${Date.now()}`;
-            const newSession = { session_id: newId, title: 'New Chat' };
-            setSessions([newSession]);
-            setSessionId(newId);
-            setMessages([]);
+            setIsNewChat(true);
+            setIsSettingsModalOpen(true);
         }
     }, []);
 
@@ -102,14 +104,39 @@ function ChatWithParams() {
         const data = await res.json();
         setMessages(data);
         setShowSidebar(false);
+        
+        const session = sessions.find(s => s.session_id === id);
+        if (session?.settings) {
+            setCurrentSettings(session.settings);
+        }
     };
 
     const startNewSession = async () => {
-        const newId = `${userId}-${Date.now()}`;
-        const newSession = { session_id: newId, title: 'New Chat' };
-        setSessions((prev) => [newSession, ...prev]);
-        setSessionId(newId);
-        setMessages([]);
+        setIsNewChat(true);
+        setIsSettingsModalOpen(true);
+    };
+
+    const handleSaveSettings = async (settings: ChatSettings) => {
+        if (isNewChat) {
+            const newId = `${userId}-${Date.now()}`;
+            const newSession: Session = { 
+                session_id: newId, 
+                title: 'New Chat',
+                settings: settings
+            };
+            setSessions((prev) => [newSession, ...prev]);
+            setSessionId(newId);
+            setMessages([]);
+            setCurrentSettings(settings);
+            setIsNewChat(false);
+        } else {
+            setSessions(prev => prev.map(s => 
+                s.session_id === sessionId ? { ...s, settings } : s
+            ));
+            setCurrentSettings(settings);
+            
+        }
+        setIsSettingsModalOpen(false);
     };
 
     const sendMessage = async () => {
@@ -128,6 +155,7 @@ function ChatWithParams() {
                     user_id: userId,
                     session_id: sessionId,
                     user_message: userMessage,
+                    settings: currentSettings, 
                 }),
             });
 
@@ -191,18 +219,19 @@ function ChatWithParams() {
 
     return (
         <main className="flex flex-col md:flex-row h-screen bg-gray-100">
-            <Sidebar
-                sessions={sessions}
-                currentSessionId={sessionId}
-                onNewSession={startNewSession}
-                onSessionSelect={loadSession}
-                onSessionDelete={handleSessionDelete}
-                onSessionRename={handleSessionRename}
-                userId={userId}
-                showSidebar={showSidebar}
-                setShowSidebar={setShowSidebar}
-                messages={messages}
-            />
+                <Sidebar
+                    sessions={sessions}
+                    currentSessionId={sessionId}
+                    onNewSession={startNewSession}
+                    onSessionSelect={loadSession}
+                    onSessionDelete={handleSessionDelete}
+                    onSessionRename={handleSessionRename}
+                    onSettingsClick={() => setIsSettingsModalOpen(true)}
+                    userId={userId}
+                    showSidebar={showSidebar}
+                    setShowSidebar={setShowSidebar}
+                    messages={messages}
+                />
 
             <section
                 className="flex flex-col h-full flex-1 pt-16 md:pt-0 relative"
@@ -221,6 +250,15 @@ function ChatWithParams() {
                     />
                 </div>
             </section>
+
+            <ChatSettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                onSave={handleSaveSettings}
+                initialSettings={currentSettings}
+                isMandatory={isNewChat}
+                title={isNewChat ? "Configure Your New Chat" : "Chat Settings"}
+            />
         </main>
     );
 }

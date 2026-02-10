@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Menu, MessageSquare, Brain } from 'lucide-react';
+import { Menu, MessageSquare, Brain, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Session {
@@ -16,6 +16,7 @@ interface SidebarProps {
     onSessionSelect: (sessionId: string, userId: string) => void;
     onSessionDelete: (sessionId: string) => void;
     onSessionRename: (sessionId: string, newTitle: string) => void;
+    onSettingsClick: () => void;
     userId: string | null;
     showSidebar: boolean;
     setShowSidebar: (show: boolean) => void;
@@ -29,6 +30,7 @@ export default function Sidebar({
     onSessionSelect,
     onSessionDelete,
     onSessionRename,
+    onSettingsClick,
     userId,
     showSidebar,
     setShowSidebar,
@@ -131,6 +133,13 @@ export default function Sidebar({
                     >
                         <MessageSquare className="w-4 h-4" />
                         New Chat
+                    </button>
+                    <button
+                        onClick={onSettingsClick}
+                        className="w-full bg-[#343541] text-[#ececf1] py-2 rounded-lg hover:bg-[#40414f] active:scale-95 transition flex items-center justify-center gap-2 font-semibold border border-[#4d4d4f]"
+                    >
+                        <Settings className="w-4 h-4" />
+                        Chat Settings
                     </button>
                 </div>
                 <ul>
