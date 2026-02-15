@@ -31,7 +31,8 @@ function ChatWithParams() {
         setSessionId(id);
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}&user_id=${userId}`);
         const data = await res.json();
-        setMessages(data);
+        
+        setMessages(Array.isArray(data) ? data : []);
         setShowSidebar(false);
     }, []);
 
@@ -39,16 +40,11 @@ function ChatWithParams() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
         const data = await res.json();
         
-        if (data.sessions.length > 0) {
+        if (data.sessions && data.sessions.length > 0) {
             setSessions(data.sessions);
             const firstSessionId = data.sessions[0].session_id;
             setSessionId(firstSessionId);
             loadSession(firstSessionId, userId);
-            
-            // Set settings if available
-            if (data.sessions[0].settings) {
-                setCurrentSettings(data.sessions[0].settings);
-            }
         } else {
             setIsNewChat(true);
             setIsSettingsModalOpen(true);
@@ -83,6 +79,9 @@ function ChatWithParams() {
     };
 
     const handleSaveSettings = async (settings: ChatSettings) => {
+        // Save to local storage for future recommendations
+        localStorage.setItem('lastChatSettings', JSON.stringify(settings));
+        
         if (isNewChat) {
             const newId = `${userId}-${Date.now()}`;
             const newSession: Session = { 
@@ -107,6 +106,21 @@ function ChatWithParams() {
 
     const sendMessage = async () => {
         if (!message.trim()) return;
+        
+        // Ensure we have settings before sending - check state first, then fallback to local storage
+        let settingsToSend = currentSettings;
+        if (!settingsToSend) {
+            const savedSettings = localStorage.getItem('lastChatSettings');
+            if (savedSettings) {
+                settingsToSend = JSON.parse(savedSettings);
+                setCurrentSettings(settingsToSend);
+            } else {
+                // If still no settings, we must open the modal
+                setIsSettingsModalOpen(true);
+                return;
+            }
+        }
+
         const userMessage = message;
         setMessage('');
         setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
@@ -121,7 +135,7 @@ function ChatWithParams() {
                     user_id: userId,
                     session_id: sessionId,
                     user_message: userMessage,
-                    settings: currentSettings, 
+                    settings: settingsToSend, 
                 }),
             });
 
