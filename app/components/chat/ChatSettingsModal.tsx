@@ -8,6 +8,8 @@ export interface ChatSettings {
     nativeLanguage: string;
     scriptPreference: 'target' | 'native';
     formality: 'very informal' | 'casual' | 'formal';
+    gender: 'male' | 'female';
+    dialect?: string;
 }
 
 interface ChatSettingsModalProps {
@@ -33,6 +35,8 @@ export default function ChatSettingsModal({
             nativeLanguage: '',
             scriptPreference: 'target',
             formality: 'casual',
+            gender: 'female',
+            dialect: '',
         }
     );
 
@@ -148,6 +152,42 @@ export default function ChatSettingsModal({
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-[#ececf1] mb-2">
+                                Your Gender
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {(['male', 'female'] as const).map((g) => (
+                                    <button
+                                        key={g}
+                                        type="button"
+                                        onClick={() => setSettings({ ...settings, gender: g })}
+                                        className={`px-3 py-2 text-sm rounded-lg border transition-all capitalize ${
+                                            settings.gender === g
+                                                ? 'bg-[#10a37f] border-[#10a37f] text-white'
+                                                : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
+                                        }`}
+                                    >
+                                        {g}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-[#ececf1] mb-2">
+                                Dialect (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                value={settings.dialect}
+                                onChange={(e) => setSettings({ ...settings, dialect: e.target.value })}
+                                placeholder="e.g. Mexican, European, Osaka..."
+                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none placeholder-[#565869]"
+                            />
+                            <p className="text-[10px] text-[#a3a3a3] mt-1">Leave blank for no specific dialect</p>
                         </div>
                     </div>
 
