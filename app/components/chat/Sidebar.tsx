@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Menu, MessageSquare, Settings } from 'lucide-react';
+import { Menu, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Session {
     session_id: string;
@@ -39,6 +40,18 @@ export default function Sidebar({
     const [editingTitle, setEditingTitle] = useState<string | null>(null);
     const [editedTitle, setEditedTitle] = useState('');
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        try {
+            const res = await fetch('/api/logout', { method: 'POST' });
+            if (res.ok) {
+                router.push('/');
+            }
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    };
 
     const handleUpdateTitle = async (id: string) => {
         if (!editedTitle.trim()) {
@@ -121,7 +134,7 @@ export default function Sidebar({
 
             {/* Sidebar */}
             <aside
-                className={`fixed z-10 top-0 left-0 h-full w-64 bg-[#202123] border-r border-[#2a2b32] p-4 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${showSidebar ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed z-10 top-0 left-0 h-full w-64 bg-[#202123] border-r border-[#2a2b32] p-4 transition-transform duration-300 ease-in-out md:static md:translate-x-0 flex flex-col ${showSidebar ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <div className="flex flex-col gap-2 mb-4">
@@ -140,7 +153,7 @@ export default function Sidebar({
                         Chat Settings
                     </button>
                 </div>
-                <ul>
+                <ul className="flex-1 overflow-y-auto">
                     {sessions.map((s) => (
                         <li
                             key={s.session_id}
@@ -203,6 +216,16 @@ export default function Sidebar({
                         </li>
                     ))}
                 </ul>
+
+                <div className="mt-auto pt-4 border-t border-[#2a2b32]">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full bg-transparent text-red-400 py-2 rounded-lg hover:bg-red-400/10 active:scale-95 transition flex items-center justify-center gap-2 font-semibold"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Log Out
+                    </button>
+                </div>
             </aside>
         </>
     );
