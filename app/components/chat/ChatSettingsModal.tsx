@@ -35,7 +35,7 @@ export default function ChatSettingsModal({
             nativeLanguage: '',
             scriptPreference: 'target',
             formality: 'casual',
-            gender: 'female',
+            gender: 'male',
             dialect: '',
         }
     );
