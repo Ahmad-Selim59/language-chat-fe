@@ -12,7 +12,9 @@ export async function POST(request: Request) {
         secure: true,
         sameSite: 'strict',
         path: '/',
-        maxAge: 60 * 60 * 24 * 90, // 90 days
+        // No maxAge means it's a session cookie, but to make it "permanent" 
+        // until logout, we'll set a very long duration (10 years)
+        maxAge: 60 * 60 * 24 * 365 * 10, 
     });
 
     return response;
