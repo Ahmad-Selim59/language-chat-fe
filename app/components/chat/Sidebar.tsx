@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Menu, MessageSquare, Settings, LogOut, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -41,6 +41,19 @@ export default function Sidebar({
     const [editedTitle, setEditedTitle] = useState('');
     const menuRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (showMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(null);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMenu]);
 
     const handleLogout = async () => {
         try {
@@ -204,14 +217,13 @@ export default function Sidebar({
                             </div>
 
                             {editingTitle !== s.session_id && (
-                                <div className="relative shrink-0 ml-1" ref={menuRef}>
+                                <div className="relative shrink-0 ml-1" ref={showMenu === s.session_id ? menuRef : null}>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setShowMenu(showMenu === s.session_id ? null : s.session_id);
                                         }}
-                                        className={`p-1 rounded hover:bg-[#444654] transition-opacity ${showMenu === s.session_id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                            } text-[#8e8ea0] hover:text-[#ececf1]`}
+                                        className={`p-1 rounded hover:bg-[#444654] transition-opacity opacity-100 text-[#8e8ea0] hover:text-[#ececf1]`}
                                     >
                                         <span className="text-lg leading-none">...</span>
                                     </button>
