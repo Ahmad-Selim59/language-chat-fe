@@ -5,7 +5,6 @@ interface ChatInputProps {
     setMessage: (message: string) => void;
     sendMessage: () => void;
     loading: boolean;
-    keyboardHeight?: number;
 }
 
 export default function ChatInput({
@@ -13,7 +12,6 @@ export default function ChatInput({
     setMessage,
     sendMessage,
     loading,
-    keyboardHeight = 0
 }: ChatInputProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 

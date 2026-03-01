@@ -11,10 +11,9 @@ interface Message {
 
 interface ChatMessagesProps {
     messages: Message[];
-    keyboardHeight?: number;
 }
 
-export default function ChatMessages({ messages, keyboardHeight = 0 }: ChatMessagesProps) {
+export default function ChatMessages({ messages }: ChatMessagesProps) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
