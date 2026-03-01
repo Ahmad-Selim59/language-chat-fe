@@ -75,6 +75,11 @@ function ChatWithParams() {
 
     const startNewSession = async () => {
         setIsNewChat(true);
+        // Pre-load settings from local storage if available
+        const savedSettings = localStorage.getItem('lastChatSettings');
+        if (savedSettings) {
+            setCurrentSettings(JSON.parse(savedSettings));
+        }
         setIsSettingsModalOpen(true);
     };
 
@@ -116,6 +121,7 @@ function ChatWithParams() {
                 setCurrentSettings(settingsToSend);
             } else {
                 // If still no settings, we must open the modal
+                setIsNewChat(true);
                 setIsSettingsModalOpen(true);
                 return;
             }
@@ -235,7 +241,7 @@ function ChatWithParams() {
                 onClose={() => setIsSettingsModalOpen(false)}
                 onSave={handleSaveSettings}
                 initialSettings={currentSettings}
-                isMandatory={isNewChat}
+                isMandatory={isNewChat && sessions.length === 0}
                 title={isNewChat ? "Configure Your New Chat" : "Chat Settings"}
             />
         </main>
