@@ -198,7 +198,7 @@ function ChatWithParams() {
     };
 
     return (
-        <main className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#1a1a1a] relative">
+        <main className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#1a1a1a] relative overflow-hidden overscroll-none">
             <Sidebar
                 sessions={sessions}
                 currentSessionId={sessionId}
