@@ -126,7 +126,7 @@ export default function Sidebar({
         <>
             {/* Mobile Hamburger */}
             <button
-                className="fixed top-4 left-4 z-20 p-2 md:hidden bg-[#202123] shadow-md rounded-md border border-[#2a2b32]"
+                className="fixed top-4 left-4 z-20 p-2 md:hidden bg-[#202123] shadow-md rounded-md border border-[#2a2b32] text-[#ececf1]"
                 onClick={() => setShowSidebar(!showSidebar)}
             >
                 <Menu className="w-5 h-5" />

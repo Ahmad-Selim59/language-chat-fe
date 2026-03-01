@@ -31,7 +31,7 @@ function ChatWithParams() {
         setSessionId(id);
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}&user_id=${userId}`);
         const data = await res.json();
-        
+
         setMessages(Array.isArray(data) ? data : []);
         setShowSidebar(false);
     }, []);
@@ -39,7 +39,7 @@ function ChatWithParams() {
     const fetchSessions = useCallback(async (userId: string) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
         const data = await res.json();
-        
+
         if (data.sessions && data.sessions.length > 0) {
             setSessions(data.sessions);
             const firstSessionId = data.sessions[0].session_id;
@@ -81,11 +81,11 @@ function ChatWithParams() {
     const handleSaveSettings = async (settings: ChatSettings) => {
         // Save to local storage for future recommendations
         localStorage.setItem('lastChatSettings', JSON.stringify(settings));
-        
+
         if (isNewChat) {
             const newId = `${userId}-${Date.now()}`;
-            const newSession: Session = { 
-                session_id: newId, 
+            const newSession: Session = {
+                session_id: newId,
                 title: 'New Chat',
                 settings: settings
             };
@@ -95,18 +95,18 @@ function ChatWithParams() {
             setCurrentSettings(settings);
             setIsNewChat(false);
         } else {
-            setSessions(prev => prev.map(s => 
+            setSessions(prev => prev.map(s =>
                 s.session_id === sessionId ? { ...s, settings } : s
             ));
             setCurrentSettings(settings);
-            
+
         }
         setIsSettingsModalOpen(false);
     };
 
     const sendMessage = async () => {
         if (!message.trim()) return;
-        
+
         // Ensure we have settings before sending - check state first, then fallback to local storage
         let settingsToSend = currentSettings;
         if (!settingsToSend) {
@@ -135,7 +135,7 @@ function ChatWithParams() {
                     user_id: userId,
                     session_id: sessionId,
                     user_message: userMessage,
-                    settings: settingsToSend, 
+                    settings: settingsToSend,
                 }),
             });
 
@@ -151,10 +151,10 @@ function ChatWithParams() {
                         await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/title`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                session_id: sessionId, 
+                            body: JSON.stringify({
+                                session_id: sessionId,
                                 new_title: currentSession.title,
-                                user_id: userId 
+                                user_id: userId
                             }),
                         });
                     } catch (error) {
@@ -188,9 +188,9 @@ function ChatWithParams() {
     };
 
     const handleSessionRename = (sessionId: string, newTitle: string) => {
-        setSessions(prev => 
-            prev.map(session => 
-                session.session_id === sessionId 
+        setSessions(prev =>
+            prev.map(session =>
+                session.session_id === sessionId
                     ? { ...session, title: newTitle }
                     : session
             )
@@ -198,23 +198,23 @@ function ChatWithParams() {
     };
 
     return (
-        <main className="flex flex-col md:flex-row h-screen bg-gray-100">
-                <Sidebar
-                    sessions={sessions}
-                    currentSessionId={sessionId}
-                    onNewSession={startNewSession}
-                    onSessionSelect={loadSession}
-                    onSessionDelete={handleSessionDelete}
-                    onSessionRename={handleSessionRename}
-                    onSettingsClick={() => setIsSettingsModalOpen(true)}
-                    userId={userId}
-                    showSidebar={showSidebar}
-                    setShowSidebar={setShowSidebar}
-                    messages={messages}
-                />
+        <main className="flex flex-col md:flex-row h-screen bg-[#1a1a1a]">
+            <Sidebar
+                sessions={sessions}
+                currentSessionId={sessionId}
+                onNewSession={startNewSession}
+                onSessionSelect={loadSession}
+                onSessionDelete={handleSessionDelete}
+                onSessionRename={handleSessionRename}
+                onSettingsClick={() => setIsSettingsModalOpen(true)}
+                userId={userId}
+                showSidebar={showSidebar}
+                setShowSidebar={setShowSidebar}
+                messages={messages}
+            />
 
             <section
-                className="flex flex-col h-full flex-1 pt-16 md:pt-0 relative"
+                className="flex flex-col h-full flex-1 relative"
                 onClick={() => {
                     if (showSidebar) setShowSidebar(false);
                 }}
