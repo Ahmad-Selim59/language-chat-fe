@@ -21,7 +21,7 @@ export default function ChatMessages({ messages, keyboardHeight = 0 }: ChatMessa
 
     return (
         <div
-            className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 min-h-0 custom-scrollbar bg-[#1a1a1a]"
+            className="flex-1 overflow-y-auto px-4 pt-4 flex flex-col space-y-4 min-h-0 custom-scrollbar bg-[#1a1a1a]"
             style={{
                 paddingBottom: keyboardHeight > 0 ? `${Math.min(keyboardHeight + 80, window.innerHeight * 0.5)}px` : '80px'
             }}
@@ -32,10 +32,10 @@ export default function ChatMessages({ messages, keyboardHeight = 0 }: ChatMessa
             {messages.map((msg, i) => (
                 <div
                     key={i}
-                    className={`p-3 rounded-lg max-w-[100%] ${
+                    className={`p-3 rounded-2xl w-fit max-w-[85%] md:max-w-[70%] shadow-sm ${
                         msg.role === 'user'
-                            ? 'bg-[#343541] self-end text-right text-[#ececf1]'
-                            : 'bg-[#23232a] self-start text-left text-[#ececf1]'
+                            ? 'bg-[#005c4b] self-end text-[#e9edef] rounded-tr-none'
+                            : 'bg-[#202c33] self-start text-[#e9edef] rounded-tl-none'
                     }`}
                 >
                     {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
