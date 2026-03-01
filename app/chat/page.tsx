@@ -36,15 +36,17 @@ function ChatWithParams() {
         setShowSidebar(false);
     }, []);
 
-    const fetchSessions = useCallback(async (userId: string) => {
+    const fetchSessions = useCallback(async (userId: string, shouldLoad: boolean = true) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
         const data = await res.json();
 
         if (data.sessions && data.sessions.length > 0) {
             setSessions(data.sessions);
-            const firstSessionId = data.sessions[0].session_id;
-            setSessionId(firstSessionId);
-            loadSession(firstSessionId, userId);
+            if (shouldLoad) {
+                const firstSessionId = data.sessions[0].session_id;
+                setSessionId(firstSessionId);
+                loadSession(firstSessionId, userId);
+            }
         } else {
             setIsNewChat(true);
             setIsSettingsModalOpen(true);
@@ -147,26 +149,18 @@ function ChatWithParams() {
 
             const data = await res.json();
             const reply = data.llm_response;
+
+            // Check if this was the first message (previous length was 0)
+            const isFirstMessage = messages.length === 0;
+
             setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
 
-            // If this was the first message, update the title after the session is created
-            if (messages.length === 0) {
-                const currentSession = sessions.find(s => s.session_id === sessionId);
-                if (currentSession) {
-                    try {
-                        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/title`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                session_id: sessionId,
-                                new_title: currentSession.title,
-                                user_id: userId
-                            }),
-                        });
-                    } catch (error) {
-                        console.error('Failed to update title after first message:', error);
-                    }
-                }
+            // If it was the first message, refresh the sessions to get the backend-generated title
+            if (isFirstMessage && userId) {
+                // Add a small delay to ensure the backend has finished title generation
+                setTimeout(() => {
+                    fetchSessions(userId, false);
+                }, 4000);
             }
         } catch (err) {
             console.error('Message send failed:', err);
