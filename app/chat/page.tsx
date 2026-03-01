@@ -198,7 +198,7 @@ function ChatWithParams() {
     };
 
     return (
-        <main className="fixed inset-0 flex flex-col md:flex-row h-[100dvh] w-full bg-[#1a1a1a] overflow-hidden overscroll-none">
+        <main className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#1a1a1a] relative">
             <Sidebar
                 sessions={sessions}
                 currentSessionId={sessionId}
@@ -214,7 +214,7 @@ function ChatWithParams() {
             />
 
             <section
-                className="flex flex-col h-full flex-1 relative"
+                className="flex flex-col h-full flex-1 min-h-0 min-w-0 relative"
                 onClick={() => {
                     if (showSidebar) setShowSidebar(false);
                 }}
@@ -245,7 +245,7 @@ function ChatWithParams() {
 export default function Chat() {
     return (
         <Suspense fallback={
-            <div className="fixed inset-0 flex items-center justify-center h-[100dvh] w-full bg-[#1a1a1a] overflow-hidden">
+            <div className="flex items-center justify-center h-[100dvh] w-full bg-[#1a1a1a]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
             </div>
         }>
