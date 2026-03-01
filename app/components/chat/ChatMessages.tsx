@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
     role: string;
@@ -32,13 +34,16 @@ export default function ChatMessages({ messages, keyboardHeight = 0 }: ChatMessa
             {messages.map((msg, i) => (
                 <div
                     key={i}
-                    className={`p-3 rounded-2xl w-fit max-w-[85%] md:max-w-[70%] shadow-sm ${
-                        msg.role === 'user'
-                            ? 'bg-[#005c4b] self-end text-[#e9edef] rounded-tr-none'
-                            : 'bg-[#202c33] self-start text-[#e9edef] rounded-tl-none'
-                    }`}
+                    className={`p-3 rounded-2xl w-fit max-w-[85%] md:max-w-[70%] shadow-sm ${msg.role === 'user'
+                        ? 'bg-[#005c4b] self-end text-[#e9edef] rounded-tr-none'
+                        : 'bg-[#202c33] self-start text-[#e9edef] rounded-tl-none'
+                        }`}
                 >
-                    {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
+                    <div className="markdown-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             ))}
             <div ref={bottomRef} />

@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 body {
-  background: #1a1a1a;
-  color: #ececf1;
+    background: #1a1a1a;
+    color: #ececf1;
 }
 
 /* Custom scrollbar styles */
@@ -26,4 +26,43 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #444654;
+}
+
+/* Markdown Content Styles */
+.markdown-content {
+    @apply break-words;
+}
+
+.markdown-content p {
+    @apply mb-1 last:mb-0;
+}
+
+.markdown-content ul {
+    @apply list-disc ml-5 mb-1;
+}
+
+.markdown-content ol {
+    @apply list-decimal ml-5 mb-1;
+}
+
+.markdown-content li {
+    @apply mb-1;
+}
+
+.markdown-content li>p {
+    @apply inline;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+    @apply font-bold mt-2 mb-1;
+}
+
+.markdown-content code {
+    @apply bg-black/30 px-1 rounded font-mono text-sm;
+}
+
+.markdown-content pre {
+    @apply bg-black/30 p-2 rounded my-1 overflow-x-auto;
 }
