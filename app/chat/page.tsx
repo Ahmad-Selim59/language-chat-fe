@@ -220,7 +220,7 @@ function ChatWithParams() {
                 }}
             >
                 <ChatMessages messages={messages} />
-                <div className="relative z-0">
+                <div className="relative z-0 shrink-0">
                     <ChatInput
                         message={message}
                         setMessage={setMessage}

@@ -23,10 +23,7 @@ export default function ChatMessages({ messages, keyboardHeight = 0 }: ChatMessa
 
     return (
         <div
-            className="flex-1 overflow-y-auto px-4 pt-4 flex flex-col space-y-4 min-h-0 custom-scrollbar bg-[#1a1a1a]"
-            style={{
-                paddingBottom: keyboardHeight > 0 ? `${Math.min(keyboardHeight + 80, window.innerHeight * 0.5)}px` : '80px'
-            }}
+            className="flex-1 overflow-y-auto px-4 py-4 flex flex-col space-y-4 min-h-0 custom-scrollbar bg-[#1a1a1a]"
         >
             {messages.length === 0 && (
                 <div className="text-[#a3a3a3] text-center mt-10">Start a new conversation!</div>

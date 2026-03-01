@@ -33,10 +33,7 @@ export default function ChatInput({
 
     return (
         <div
-            className="flex items-end space-x-2 px-4 py-3 border-t border-[#2a2b32] bg-[#1a1a1a] md:static fixed left-0 right-0 z-10 transition-all duration-200"
-            style={{
-                bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px'
-            }}
+            className="flex items-end space-x-2 px-4 py-3 border-t border-[#2a2b32] bg-[#1a1a1a] w-full shrink-0 z-10 transition-all duration-200"
         >
             <div className="flex-1 bg-[#23232a] rounded-2xl border border-[#343541] focus-within:border-[#10a37f] transition-colors overflow-hidden">
                 <textarea
