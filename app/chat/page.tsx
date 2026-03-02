@@ -39,6 +39,9 @@ function ChatWithParams() {
     const [translationModalOpen, setTranslationModalOpen] = useState(false);
     const [translationData, setTranslationData] = useState<string>('');
     const [isTranslating, setIsTranslating] = useState(false);
+    const [emailPrefix, setEmailPrefix] = useState('user');
+
+    const generateId = useCallback(() => `${emailPrefix}-${Date.now()}`, [emailPrefix]);
 
     const authHeaders = useCallback((token: string) => ({
         'Content-Type': 'application/json',
@@ -46,6 +49,7 @@ function ChatWithParams() {
     }), []);
 
     const loadSession = useCallback(async (id: string) => {
+        if (!id) return;
         const tok = await getToken();
         if (!tok) return;
         setSessionId(id);
@@ -69,15 +73,27 @@ function ChatWithParams() {
             if (data.sessions && data.sessions.length > 0) {
                 setSessions(data.sessions);
                 if (shouldLoad) {
-                    const firstSessionId = data.sessions[0].session_id;
-                    setSessionId(firstSessionId);
-                    loadSession(firstSessionId);
+                    // Only auto-load if we don't already have an active session 
+                    // (this prevents jumping back to session[0] when creating a new chat)
+                    setSessionId(prev => {
+                        if (prev) return prev;
+                        const firstId = data.sessions[0].session_id;
+                        if (firstId) loadSession(firstId);
+                        return firstId;
+                    });
                 }
+            } else if (shouldLoad) {
+                setSessionId(prev => {
+                    if (prev) return prev;
+                    const newId = generateId();
+                    setSessions([{ session_id: newId, title: 'New Chat' }]);
+                    return newId;
+                });
             }
         } catch {
             // Network error – ignore silently
         }
-    }, [loadSession]);
+    }, [loadSession, generateId]); // Removed sessionId dependency
 
     // Auth check and initial data load on mount
     useEffect(() => {
@@ -85,6 +101,9 @@ function ChatWithParams() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.push('/'); return; }
             setToken(session.access_token);
+            if (session.user?.email) {
+                setEmailPrefix(session.user.email.split('@')[0]);
+            }
 
             // Load settings from DB
             const dbSettings = await getUserSettings();
@@ -106,7 +125,8 @@ function ChatWithParams() {
             else setToken(session.access_token);
         });
         return () => subscription.unsubscribe();
-    }, [fetchSessions, router]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router]); // Removed fetchSessions to stop the loop
 
     // Handle session URL param
     useEffect(() => {
@@ -127,7 +147,7 @@ function ChatWithParams() {
         await saveUserSettings(settings);
 
         if (isNewChat) {
-            const newId = `user-${Date.now()}`;
+            const newId = generateId();
             setSessions((prev) => [{ session_id: newId, title: 'New Chat', settings }, ...prev]);
             setSessionId(newId);
             setMessages([]);
@@ -177,6 +197,12 @@ function ChatWithParams() {
             });
 
             const data = await res.json();
+
+            // Sync the real session ID from the backend if it assigned one
+            if (data.session_id && sessionId !== data.session_id) {
+                setSessionId(data.session_id);
+            }
+
             const reply = data.llm_response;
             const isFirstMessage = messages.length === 0;
 
@@ -200,7 +226,7 @@ function ChatWithParams() {
                 setSessionId(remaining[0].session_id);
                 loadSession(remaining[0].session_id);
             } else {
-                const newId = `user-${Date.now()}`;
+                const newId = generateId();
                 setSessions([{ session_id: newId, title: 'New Chat' }]);
                 setSessionId(newId);
                 setMessages([]);
