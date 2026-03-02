@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import Sidebar from '../components/chat/Sidebar';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSettingsModal, { ChatSettings } from '../components/chat/ChatSettingsModal';
 import TranslationModal from '../components/chat/TranslationModal';
+import { getUserSettings, saveUserSettings } from '@/lib/userSettings';
 
 interface Session {
     session_id: string;
@@ -14,10 +16,16 @@ interface Session {
     settings?: ChatSettings;
 }
 
+/** Helper: get the current JWT access token */
+async function getToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+}
+
 function ChatWithParams() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [userId, setUserId] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState('');
     const [sessions, setSessions] = useState<Session[]>([]);
     const [messages, setMessages] = useState<{ id?: number; role: string; content: string }[]>([]);
@@ -32,86 +40,102 @@ function ChatWithParams() {
     const [translationData, setTranslationData] = useState<string>('');
     const [isTranslating, setIsTranslating] = useState(false);
 
-    const loadSession = useCallback(async (id: string, userId: string) => {
-        setSessionId(id);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}&user_id=${userId}`);
-        const data = await res.json();
+    const authHeaders = useCallback((token: string) => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+    }), []);
 
+    const loadSession = useCallback(async (id: string) => {
+        const tok = await getToken();
+        if (!tok) return;
+        setSessionId(id);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}`, {
+            headers: { 'Authorization': `Bearer ${tok}` },
+        });
+        const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
         setShowSidebar(false);
     }, []);
 
-    const fetchSessions = useCallback(async (userId: string, shouldLoad: boolean = true) => {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions?user_id=${userId}`);
-        const data = await res.json();
-
-        if (data.sessions && data.sessions.length > 0) {
-            setSessions(data.sessions);
-            if (shouldLoad) {
-                const firstSessionId = data.sessions[0].session_id;
-                setSessionId(firstSessionId);
-                loadSession(firstSessionId, userId);
+    const fetchSessions = useCallback(async (_userId?: string, shouldLoad: boolean = true) => {
+        const tok = await getToken();
+        if (!tok) return;
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sessions`, {
+                headers: { 'Authorization': `Bearer ${tok}` },
+            });
+            if (!res.ok) return; // backend not yet updated for JWT – silently ignore
+            const data = await res.json();
+            if (data.sessions && data.sessions.length > 0) {
+                setSessions(data.sessions);
+                if (shouldLoad) {
+                    const firstSessionId = data.sessions[0].session_id;
+                    setSessionId(firstSessionId);
+                    loadSession(firstSessionId);
+                }
             }
-        } else {
-            setIsNewChat(true);
-            setIsSettingsModalOpen(true);
+        } catch {
+            // Network error – ignore silently
         }
     }, [loadSession]);
 
+    // Auth check and initial data load on mount
     useEffect(() => {
-        const fetchUserIdAndSessions = async () => {
-            const res = await fetch('/api/get-cookie');
-            const data = await res.json();
-            if (data.userId) {
-                setUserId(data.userId);
-                fetchSessions(data.userId);
-            } else {
-                router.push('/');
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { router.push('/'); return; }
+            setToken(session.access_token);
+
+            // Load settings from DB
+            const dbSettings = await getUserSettings();
+            setCurrentSettings(dbSettings ?? undefined);
+
+            // If no settings saved at all, prompt user to configure
+            if (!dbSettings) {
+                setIsNewChat(true);
+                setIsSettingsModalOpen(true);
             }
+
+            // Load sessions regardless
+            fetchSessions();
         };
-        fetchUserIdAndSessions();
+        init();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!session) router.push('/');
+            else setToken(session.access_token);
+        });
+        return () => subscription.unsubscribe();
     }, [fetchSessions, router]);
 
-    // Handle session parameter from URL
+    // Handle session URL param
     useEffect(() => {
         const sessionParam = searchParams.get('session');
-        if (sessionParam && userId && sessionParam !== sessionId) {
-            loadSession(sessionParam, userId);
+        if (sessionParam && token && sessionParam !== sessionId) {
+            loadSession(sessionParam);
         }
-    }, [searchParams, userId, loadSession, sessionId]);
+    }, [searchParams, token, loadSession, sessionId]);
 
     const startNewSession = async () => {
         setIsNewChat(true);
-        // Pre-load settings from local storage if available
-        const savedSettings = localStorage.getItem('lastChatSettings');
-        if (savedSettings) {
-            setCurrentSettings(JSON.parse(savedSettings));
-        }
+        // currentSettings is already loaded from DB on mount
         setIsSettingsModalOpen(true);
     };
 
     const handleSaveSettings = async (settings: ChatSettings) => {
-        // Save to local storage for future recommendations
-        localStorage.setItem('lastChatSettings', JSON.stringify(settings));
+        // Persist to Supabase DB
+        await saveUserSettings(settings);
 
         if (isNewChat) {
-            const newId = `${userId}-${Date.now()}`;
-            const newSession: Session = {
-                session_id: newId,
-                title: 'New Chat',
-                settings: settings
-            };
-            setSessions((prev) => [newSession, ...prev]);
+            const newId = `user-${Date.now()}`;
+            setSessions((prev) => [{ session_id: newId, title: 'New Chat', settings }, ...prev]);
             setSessionId(newId);
             setMessages([]);
             setCurrentSettings(settings);
             setIsNewChat(false);
         } else {
-            setSessions(prev => prev.map(s =>
-                s.session_id === sessionId ? { ...s, settings } : s
-            ));
+            setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, settings } : s));
             setCurrentSettings(settings);
-
         }
         setIsSettingsModalOpen(false);
     };
@@ -119,20 +143,22 @@ function ChatWithParams() {
     const sendMessage = async () => {
         if (!message.trim()) return;
 
-        // Ensure we have settings before sending - check state first, then fallback to local storage
         let settingsToSend = currentSettings;
         if (!settingsToSend) {
-            const savedSettings = localStorage.getItem('lastChatSettings');
-            if (savedSettings) {
-                settingsToSend = JSON.parse(savedSettings);
-                setCurrentSettings(settingsToSend);
+            // Try loading from DB as last resort
+            const dbSettings = await getUserSettings();
+            if (dbSettings) {
+                settingsToSend = dbSettings;
+                setCurrentSettings(dbSettings);
             } else {
-                // If still no settings, we must open the modal
                 setIsNewChat(true);
                 setIsSettingsModalOpen(true);
                 return;
             }
         }
+
+        const tok = await getToken();
+        if (!tok) { router.push('/'); return; }
 
         const userMessage = message;
         setMessage('');
@@ -140,12 +166,10 @@ function ChatWithParams() {
         setLoading(true);
 
         try {
-            // Send the message first
-            const res = await fetch('/api/send-message', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(tok),
                 body: JSON.stringify({
-                    user_id: userId,
                     session_id: sessionId,
                     user_message: userMessage,
                     settings: settingsToSend,
@@ -154,18 +178,12 @@ function ChatWithParams() {
 
             const data = await res.json();
             const reply = data.llm_response;
-
-            // Check if this was the first message (previous length was 0)
             const isFirstMessage = messages.length === 0;
 
             setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
 
-            // If it was the first message, refresh the sessions to get the backend-generated title
-            if (isFirstMessage && userId) {
-                // Add a small delay to ensure the backend has finished title generation
-                setTimeout(() => {
-                    fetchSessions(userId, false);
-                }, 4000);
+            if (isFirstMessage) {
+                setTimeout(() => fetchSessions(undefined, false), 4000);
             }
         } catch (err) {
             console.error('Message send failed:', err);
@@ -175,61 +193,47 @@ function ChatWithParams() {
     };
 
     const handleSessionDelete = (deletedSessionId: string) => {
-        setSessions(prev => prev.filter(session => session.session_id !== deletedSessionId));
+        setSessions(prev => prev.filter(s => s.session_id !== deletedSessionId));
         if (deletedSessionId === sessionId) {
-            const remainingSessions = sessions.filter(s => s.session_id !== deletedSessionId);
-            if (remainingSessions.length > 0) {
-                setSessionId(remainingSessions[0].session_id);
-                loadSession(remainingSessions[0].session_id, userId!);
+            const remaining = sessions.filter(s => s.session_id !== deletedSessionId);
+            if (remaining.length > 0) {
+                setSessionId(remaining[0].session_id);
+                loadSession(remaining[0].session_id);
             } else {
-                // Create a new default session if all sessions are deleted
-                const newId = `${userId}-${Date.now()}`;
-                const newSession = { session_id: newId, title: 'New Chat' };
-                setSessions([newSession]);
+                const newId = `user-${Date.now()}`;
+                setSessions([{ session_id: newId, title: 'New Chat' }]);
                 setSessionId(newId);
                 setMessages([]);
             }
         }
     };
 
-    const handleSessionRename = (sessionId: string, newTitle: string) => {
-        setSessions(prev =>
-            prev.map(session =>
-                session.session_id === sessionId
-                    ? { ...session, title: newTitle }
-                    : session
-            )
-        );
+    const handleSessionRename = (sid: string, newTitle: string) => {
+        setSessions(prev => prev.map(s => s.session_id === sid ? { ...s, title: newTitle } : s));
     };
 
     const handleTranslate = async (index: number) => {
-        let nativeLang = currentSettings?.nativeLanguage;
+        const nativeLang = currentSettings?.nativeLanguage;
         if (!nativeLang) {
-            // Try getting it from localStorage
-            const savedSettings = localStorage.getItem('lastChatSettings');
-            if (savedSettings) {
-                const parsed = JSON.parse(savedSettings);
-                nativeLang = parsed.nativeLanguage;
-            }
-        }
-
-        if (!nativeLang) {
-            alert("Please set your native language in Chat Settings first!");
+            alert('Please set your native language in Chat Settings first!');
             setIsSettingsModalOpen(true);
             return;
         }
+
+        const tok = await getToken();
+        if (!tok) { router.push('/'); return; }
 
         setIsTranslating(true);
         setTranslationModalOpen(true);
         setTranslationData('');
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/translate?session_id=${sessionId}&message_id=${index}&native_language=${encodeURIComponent(nativeLang)}`);
-            if (!res.ok) {
-                throw new Error('Failed to translate');
-            }
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/translate?session_id=${sessionId}&message_id=${index}&native_language=${encodeURIComponent(nativeLang)}`,
+                { headers: { 'Authorization': `Bearer ${tok}` } }
+            );
+            if (!res.ok) throw new Error('Failed to translate');
             const data = await res.json();
-
             if (typeof data.translation === 'string') {
                 setTranslationData(data.translation);
             } else if (typeof data === 'string') {
@@ -238,11 +242,16 @@ function ChatWithParams() {
                 setTranslationData(JSON.stringify(data, null, 2));
             }
         } catch (error) {
-            setTranslationData("Failed to fetch translation.");
+            setTranslationData('Failed to fetch translation.');
             console.error(error);
         } finally {
             setIsTranslating(false);
         }
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push('/');
     };
 
     return (
@@ -255,7 +264,8 @@ function ChatWithParams() {
                 onSessionDelete={handleSessionDelete}
                 onSessionRename={handleSessionRename}
                 onSettingsClick={() => setIsSettingsModalOpen(true)}
-                userId={userId}
+                onLogout={handleLogout}
+                token={token}
                 showSidebar={showSidebar}
                 setShowSidebar={setShowSidebar}
                 messages={messages}
@@ -263,9 +273,7 @@ function ChatWithParams() {
 
             <section
                 className="flex flex-col h-full flex-1 min-h-0 min-w-0 relative"
-                onClick={() => {
-                    if (showSidebar) setShowSidebar(false);
-                }}
+                onClick={() => { if (showSidebar) setShowSidebar(false); }}
             >
                 <ChatMessages messages={messages} onTranslate={handleTranslate} />
                 <div className="relative z-0 shrink-0">
@@ -284,7 +292,7 @@ function ChatWithParams() {
                 onSave={handleSaveSettings}
                 initialSettings={currentSettings}
                 isMandatory={isNewChat && sessions.length === 0}
-                title={isNewChat ? "Configure Your New Chat" : "Chat Settings"}
+                title={isNewChat ? 'Configure Your New Chat' : 'Chat Settings'}
             />
 
             <TranslationModal

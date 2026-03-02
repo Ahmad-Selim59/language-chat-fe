@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Menu, MessageSquare, Settings, LogOut, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface Session {
     session_id: string;
@@ -13,11 +12,12 @@ interface SidebarProps {
     sessions: Session[];
     currentSessionId: string;
     onNewSession: () => void;
-    onSessionSelect: (sessionId: string, userId: string) => void;
+    onSessionSelect: (sessionId: string, userId?: string) => void;
     onSessionDelete: (sessionId: string) => void;
     onSessionRename: (sessionId: string, newTitle: string) => void;
     onSettingsClick: () => void;
-    userId: string | null;
+    onLogout: () => void;
+    token: string | null;
     showSidebar: boolean;
     setShowSidebar: (show: boolean) => void;
     messages: { role: string; content: string }[];
@@ -31,7 +31,8 @@ export default function Sidebar({
     onSessionDelete,
     onSessionRename,
     onSettingsClick,
-    userId,
+    onLogout,
+    token,
     showSidebar,
     setShowSidebar,
     messages
@@ -40,7 +41,6 @@ export default function Sidebar({
     const [editingTitle, setEditingTitle] = useState<string | null>(null);
     const [editedTitle, setEditedTitle] = useState('');
     const menuRef = useRef<HTMLDivElement | null>(null);
-    const router = useRouter();
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -55,25 +55,11 @@ export default function Sidebar({
         };
     }, [showMenu]);
 
-    const handleLogout = async () => {
-        try {
-            const res = await fetch('/api/logout', { method: 'POST' });
-            if (res.ok) {
-                router.push('/');
-            }
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
+    const handleLogout = () => onLogout();
 
     const handleUpdateTitle = async (id: string) => {
-        if (!editedTitle.trim()) {
-            setEditingTitle(null);
-            setEditedTitle('');
-            return;
-        }
+        if (!editedTitle.trim()) { setEditingTitle(null); setEditedTitle(''); return; }
 
-        // If the session has no messages, handle it client-side
         if (messages.length === 0) {
             onSessionRename(id, editedTitle);
             setEditingTitle(null);
@@ -81,16 +67,13 @@ export default function Sidebar({
             return;
         }
 
-        // If the session has messages, update the backend
         try {
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/title`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: id,
-                    new_title: editedTitle,
-                    user_id: userId
-                }),
+                headers,
+                body: JSON.stringify({ session_id: id, new_title: editedTitle }),
             });
 
             if (res.ok) {
@@ -98,20 +81,13 @@ export default function Sidebar({
                 setEditingTitle(null);
                 setEditedTitle('');
             } else {
-                console.error('Failed to update session title');
-                // Revert the title in the input
                 const currentSession = sessions.find(s => s.session_id === id);
-                if (currentSession) {
-                    setEditedTitle(currentSession.title);
-                }
+                if (currentSession) setEditedTitle(currentSession.title);
             }
         } catch (error) {
             console.error('Error updating session title:', error);
-            // Revert the title in the input
             const currentSession = sessions.find(s => s.session_id === id);
-            if (currentSession) {
-                setEditedTitle(currentSession.title);
-            }
+            if (currentSession) setEditedTitle(currentSession.title);
         }
     };
 
@@ -126,7 +102,7 @@ export default function Sidebar({
                 if (id === currentSessionId) {
                     const remainingSessions = sessions.filter((s) => s.session_id !== id);
                     if (remainingSessions.length > 0) {
-                        onSessionSelect(remainingSessions[0].session_id, userId!);
+                        onSessionSelect(remainingSessions[0].session_id);
                     }
                 }
             }
@@ -191,7 +167,7 @@ export default function Sidebar({
                                 ? 'bg-[#343541] text-white'
                                 : 'text-[#ececf1] hover:bg-[#2a2b32]'
                                 }`}
-                            onClick={() => onSessionSelect(s.session_id, userId!)}
+                            onClick={() => onSessionSelect(s.session_id)}
                         >
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <MessageSquare className={`w-4 h-4 shrink-0 ${s.session_id === currentSessionId ? 'text-white' : 'text-[#8e8ea0]'}`} />
@@ -261,7 +237,7 @@ export default function Sidebar({
                 <div className="mt-auto pt-4 border-t border-[#2a2b32]">
                     <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-lg hover:bg-[#2a2b32] cursor-pointer transition-colors group">
                         <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {userId?.substring(0, 1).toUpperCase() || 'U'}
+                            U
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">User Account</p>
