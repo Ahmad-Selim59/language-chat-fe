@@ -20,7 +20,7 @@ function ChatWithParams() {
     const [userId, setUserId] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState('');
     const [sessions, setSessions] = useState<Session[]>([]);
-    const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+    const [messages, setMessages] = useState<{ id?: number; role: string; content: string }[]>([]);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);

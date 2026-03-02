@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { Languages } from 'lucide-react';
 
 interface Message {
+    id?: number;
     role: string;
     content: string;
 }
@@ -45,7 +46,7 @@ export default function ChatMessages({ messages, onTranslate }: ChatMessagesProp
                     {msg.role !== 'user' && onTranslate && (
                         <div className="flex justify-end mt-2">
                             <button
-                                onClick={() => onTranslate(i)}
+                                onClick={() => onTranslate(msg.id ?? i)}
                                 className="text-[#a3a3a3] hover:text-[#ececf1] transition-colors flex items-center gap-1 text-xs"
                                 title="Translate message"
                             >
