@@ -3,6 +3,7 @@
 import { useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Languages } from 'lucide-react';
 
 interface Message {
     role: string;
@@ -11,9 +12,10 @@ interface Message {
 
 interface ChatMessagesProps {
     messages: Message[];
+    onTranslate?: (index: number) => void;
 }
 
-export default function ChatMessages({ messages }: ChatMessagesProps) {
+export default function ChatMessages({ messages, onTranslate }: ChatMessagesProps) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -40,6 +42,17 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
                             {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
                         </ReactMarkdown>
                     </div>
+                    {msg.role !== 'user' && onTranslate && (
+                        <div className="flex justify-end mt-2">
+                            <button
+                                onClick={() => onTranslate(i)}
+                                className="text-[#a3a3a3] hover:text-[#ececf1] transition-colors flex items-center gap-1 text-xs"
+                                title="Translate message"
+                            >
+                                <Languages className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             ))}
             <div ref={bottomRef} />

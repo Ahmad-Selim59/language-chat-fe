@@ -6,6 +6,7 @@ import Sidebar from '../components/chat/Sidebar';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSettingsModal, { ChatSettings } from '../components/chat/ChatSettingsModal';
+import TranslationModal from '../components/chat/TranslationModal';
 
 interface Session {
     session_id: string;
@@ -26,6 +27,10 @@ function ChatWithParams() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [currentSettings, setCurrentSettings] = useState<ChatSettings | undefined>(undefined);
     const [isNewChat, setIsNewChat] = useState(false);
+
+    const [translationModalOpen, setTranslationModalOpen] = useState(false);
+    const [translationData, setTranslationData] = useState<string>('');
+    const [isTranslating, setIsTranslating] = useState(false);
 
     const loadSession = useCallback(async (id: string, userId: string) => {
         setSessionId(id);
@@ -197,6 +202,49 @@ function ChatWithParams() {
         );
     };
 
+    const handleTranslate = async (index: number) => {
+        let nativeLang = currentSettings?.nativeLanguage;
+        if (!nativeLang) {
+            // Try getting it from localStorage
+            const savedSettings = localStorage.getItem('lastChatSettings');
+            if (savedSettings) {
+                const parsed = JSON.parse(savedSettings);
+                nativeLang = parsed.nativeLanguage;
+            }
+        }
+
+        if (!nativeLang) {
+            alert("Please set your native language in Chat Settings first!");
+            setIsSettingsModalOpen(true);
+            return;
+        }
+
+        setIsTranslating(true);
+        setTranslationModalOpen(true);
+        setTranslationData('');
+
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/translate?session_id=${sessionId}&message_id=${index}&native_language=${encodeURIComponent(nativeLang)}`);
+            if (!res.ok) {
+                throw new Error('Failed to translate');
+            }
+            const data = await res.json();
+
+            if (typeof data.translation === 'string') {
+                setTranslationData(data.translation);
+            } else if (typeof data === 'string') {
+                setTranslationData(data);
+            } else {
+                setTranslationData(JSON.stringify(data, null, 2));
+            }
+        } catch (error) {
+            setTranslationData("Failed to fetch translation.");
+            console.error(error);
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
     return (
         <main className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#1a1a1a] relative overflow-hidden overscroll-none">
             <Sidebar
@@ -219,7 +267,7 @@ function ChatWithParams() {
                     if (showSidebar) setShowSidebar(false);
                 }}
             >
-                <ChatMessages messages={messages} />
+                <ChatMessages messages={messages} onTranslate={handleTranslate} />
                 <div className="relative z-0 shrink-0">
                     <ChatInput
                         message={message}
@@ -237,6 +285,13 @@ function ChatWithParams() {
                 initialSettings={currentSettings}
                 isMandatory={isNewChat && sessions.length === 0}
                 title={isNewChat ? "Configure Your New Chat" : "Chat Settings"}
+            />
+
+            <TranslationModal
+                isOpen={translationModalOpen}
+                onClose={() => setTranslationModalOpen(false)}
+                translation={translationData}
+                isLoading={isTranslating}
             />
         </main>
     );
