@@ -70,6 +70,7 @@ export default function Sidebar({
         try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/title`, {
                 method: 'PUT',
                 headers,
@@ -93,8 +94,12 @@ export default function Sidebar({
 
     const handleDeleteSession = async (id: string) => {
         try {
+            const headers: Record<string, string> = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}`, {
                 method: 'DELETE',
+                headers
             });
 
             if (res.status === 200 || res.status === 404) {
