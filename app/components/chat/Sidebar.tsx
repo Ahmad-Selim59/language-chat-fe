@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Menu, MessageSquare, Settings, LogOut, X } from 'lucide-react';
+import { Menu, MessageSquare, Settings, LogOut, X, Mic } from 'lucide-react';
 
 interface Session {
     session_id: string;
@@ -12,6 +12,7 @@ interface SidebarProps {
     sessions: Session[];
     currentSessionId: string;
     onNewSession: () => void;
+    onConversate: () => void;
     onSessionSelect: (sessionId: string, userId?: string) => void;
     onSessionDelete: (sessionId: string) => void;
     onSessionRename: (sessionId: string, newTitle: string) => void;
@@ -27,6 +28,7 @@ export default function Sidebar({
     sessions,
     currentSessionId,
     onNewSession,
+    onConversate,
     onSessionSelect,
     onSessionDelete,
     onSessionRename,
@@ -150,6 +152,13 @@ export default function Sidebar({
                     >
                         <MessageSquare className="w-4 h-4" />
                         New Chat
+                    </button>
+                    <button
+                        onClick={onConversate}
+                        className="w-full bg-[#343541] text-white py-2.5 rounded-lg hover:bg-[#40414f] active:scale-[0.98] transition flex items-center justify-center gap-2 font-medium text-sm border border-[#4d4d4f] shadow-sm mt-1"
+                    >
+                        <Mic className="w-4 h-4 text-[#10a37f]" />
+                        Conversate
                     </button>
                     <button
                         onClick={onSettingsClick}

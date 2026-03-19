@@ -8,6 +8,7 @@ import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSettingsModal, { ChatSettings } from '../components/chat/ChatSettingsModal';
 import TranslationModal from '../components/chat/TranslationModal';
+import OralChatInterface from '../components/chat/OralChatInterface';
 import { getUserSettings, saveUserSettings } from '@/lib/userSettings';
 
 interface Session {
@@ -35,6 +36,7 @@ function ChatWithParams() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [currentSettings, setCurrentSettings] = useState<ChatSettings | undefined>(undefined);
     const [isNewChat, setIsNewChat] = useState(false);
+    const [isOralMode, setIsOralMode] = useState(false);
 
     const [translationModalOpen, setTranslationModalOpen] = useState(false);
     const [translationData, setTranslationData] = useState<string>('');
@@ -53,6 +55,7 @@ function ChatWithParams() {
         const tok = await getToken();
         if (!tok) return;
         setSessionId(id);
+        setIsOralMode(false);
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat?session_id=${id}`, {
             headers: { 'Authorization': `Bearer ${tok}` },
         });
@@ -138,8 +141,14 @@ function ChatWithParams() {
 
     const startNewSession = async () => {
         setIsNewChat(true);
+        setIsOralMode(false);
         // currentSettings is already loaded from DB on mount
         setIsSettingsModalOpen(true);
+    };
+
+    const handleConversate = () => {
+        setIsOralMode(true);
+        setShowSidebar(false);
     };
 
     const handleSaveSettings = async (settings: ChatSettings) => {
@@ -286,6 +295,7 @@ function ChatWithParams() {
                 sessions={sessions}
                 currentSessionId={sessionId}
                 onNewSession={startNewSession}
+                onConversate={handleConversate}
                 onSessionSelect={loadSession}
                 onSessionDelete={handleSessionDelete}
                 onSessionRename={handleSessionRename}
@@ -301,15 +311,21 @@ function ChatWithParams() {
                 className="flex flex-col h-full flex-1 min-h-0 min-w-0 relative"
                 onClick={() => { if (showSidebar) setShowSidebar(false); }}
             >
-                <ChatMessages messages={messages} onTranslate={handleTranslate} />
-                <div className="relative z-0 shrink-0">
-                    <ChatInput
-                        message={message}
-                        setMessage={setMessage}
-                        sendMessage={sendMessage}
-                        loading={loading}
-                    />
-                </div>
+                {isOralMode ? (
+                    <OralChatInterface token={token} currentSettings={currentSettings} />
+                ) : (
+                    <>
+                        <ChatMessages messages={messages} onTranslate={handleTranslate} />
+                        <div className="relative z-0 shrink-0">
+                            <ChatInput
+                                message={message}
+                                setMessage={setMessage}
+                                sendMessage={sendMessage}
+                                loading={loading}
+                            />
+                        </div>
+                    </>
+                )}
             </section>
 
             <ChatSettingsModal
