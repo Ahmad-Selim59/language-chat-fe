@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import LANGUAGES from './languages.json';
 
 export interface ChatSettings {
     targetLanguage: string;
@@ -11,6 +12,19 @@ export interface ChatSettings {
     gender: 'male' | 'female';
     dialect?: string;
 }
+
+interface Dialect {
+  name: string;
+  code: string;
+}
+
+interface Language {
+  name: string;
+  code: string;
+  dialects?: Dialect[];
+}
+
+const LANGUAGES_DATA: Language[] = LANGUAGES;
 
 interface ChatSettingsModalProps {
     isOpen: boolean;
@@ -50,11 +64,24 @@ export default function ChatSettingsModal({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Finalize setting the correct BCP47 code based on dialect selection if applicable
+        const finalSettings = { ...settings };
+        const langData = LANGUAGES.find(l => l.name === settings.targetLanguage);
+        if (langData?.dialects && settings.dialect) {
+            const dialectData = langData.dialects.find(d => d.name === settings.dialect);
+            if (dialectData) {
+                // If the backend expects the code in certain places we could store it, 
+                // but for now we keep the settings names consistent and let backend map if needed.
+                // However, the cleanest way is to ensure dialect is set correctly.
+            }
+        }
+
         if (!settings.targetLanguage.trim() || !settings.nativeLanguage.trim()) {
             alert('Please enter both your target and native languages.');
             return;
         }
-        onSave(settings);
+        onSave(finalSettings);
     };
 
     return (
@@ -78,28 +105,34 @@ export default function ChatSettingsModal({
                             <label className="block text-sm font-medium text-[#ececf1] mb-1.5 sm:mb-2">
                                 Language to Practice
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 value={settings.targetLanguage}
                                 onChange={(e) => setSettings({ ...settings, targetLanguage: e.target.value })}
-                                placeholder="e.g. Spanish, Japanese, Klingon..."
-                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none placeholder-[#565869] text-sm sm:text-base"
+                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none text-sm sm:text-base cursor-pointer"
                                 required
-                            />
+                            >
+                                <option value="" disabled>Select a language...</option>
+                                {LANGUAGES_DATA.map(lang => (
+                                    <option key={lang.code} value={lang.name}>{lang.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-[#ececf1] mb-1.5 sm:mb-2">
                                 Your Native Language
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 value={settings.nativeLanguage}
                                 onChange={(e) => setSettings({ ...settings, nativeLanguage: e.target.value })}
-                                placeholder="e.g. English, French..."
-                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none placeholder-[#565869] text-sm sm:text-base"
+                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none text-sm sm:text-base cursor-pointer"
                                 required
-                            />
+                            >
+                                <option value="" disabled>Select your language...</option>
+                                {LANGUAGES_DATA.map(lang => (
+                                    <option key={lang.code} value={lang.name}>{lang.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
@@ -111,8 +144,8 @@ export default function ChatSettingsModal({
                                     type="button"
                                     onClick={() => setSettings({ ...settings, scriptPreference: 'target' })}
                                     className={`px-3 py-2 text-xs sm:text-sm rounded-lg border transition-all ${settings.scriptPreference === 'target'
-                                            ? 'bg-[#10a37f] border-[#10a37f] text-white'
-                                            : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
+                                        ? 'bg-[#10a37f] border-[#10a37f] text-white'
+                                        : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
                                         }`}
                                 >
                                     Target Script
@@ -121,8 +154,8 @@ export default function ChatSettingsModal({
                                     type="button"
                                     onClick={() => setSettings({ ...settings, scriptPreference: 'native' })}
                                     className={`px-3 py-2 text-xs sm:text-sm rounded-lg border transition-all ${settings.scriptPreference === 'native'
-                                            ? 'bg-[#10a37f] border-[#10a37f] text-white'
-                                            : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
+                                        ? 'bg-[#10a37f] border-[#10a37f] text-white'
+                                        : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
                                         }`}
                                 >
                                     Native Script
@@ -141,8 +174,8 @@ export default function ChatSettingsModal({
                                         type="button"
                                         onClick={() => setSettings({ ...settings, formality: level })}
                                         className={`px-1 py-2 text-[10px] sm:text-xs rounded-lg border transition-all capitalize ${settings.formality === level
-                                                ? 'bg-[#10a37f] border-[#10a37f] text-white'
-                                                : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
+                                            ? 'bg-[#10a37f] border-[#10a37f] text-white'
+                                            : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
                                             }`}
                                     >
                                         {level}
@@ -162,8 +195,8 @@ export default function ChatSettingsModal({
                                         type="button"
                                         onClick={() => setSettings({ ...settings, gender: g })}
                                         className={`px-3 py-2 text-xs sm:text-sm rounded-lg border transition-all capitalize ${settings.gender === g
-                                                ? 'bg-[#10a37f] border-[#10a37f] text-white'
-                                                : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
+                                            ? 'bg-[#10a37f] border-[#10a37f] text-white'
+                                            : 'bg-[#1a1a1a] border-[#343541] text-[#a3a3a3] hover:border-[#10a37f]'
                                             }`}
                                     >
                                         {g}
@@ -172,19 +205,29 @@ export default function ChatSettingsModal({
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-[#ececf1] mb-1.5 sm:mb-2">
-                                Dialect (Optional)
-                            </label>
-                            <input
-                                type="text"
-                                value={settings.dialect}
-                                onChange={(e) => setSettings({ ...settings, dialect: e.target.value })}
-                                placeholder="e.g. Mexican, European, Osaka..."
-                                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none placeholder-[#565869] text-sm sm:text-base"
-                            />
-                            <p className="text-[10px] text-[#a3a3a3] mt-1">Leave blank for no specific dialect</p>
-                        </div>
+                        {(() => {
+                            const selectedLang = LANGUAGES_DATA.find(l => l.name === settings.targetLanguage);
+                            if (!selectedLang?.dialects) return null;
+                            
+                            return (
+                                <div>
+                                    <label className="block text-sm font-medium text-[#ececf1] mb-1.5 sm:mb-2">
+                                        Regional Dialect
+                                    </label>
+                                    <select
+                                        value={settings.dialect}
+                                        onChange={(e) => setSettings({ ...settings, dialect: e.target.value })}
+                                        className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#343541] text-[#ececf1] rounded-lg focus:ring-2 focus:ring-[#10a37f] outline-none text-sm sm:text-base cursor-pointer"
+                                        required
+                                    >
+                                        <option value="" disabled>Select a dialect...</option>
+                                        {selectedLang.dialects.map(d => (
+                                            <option key={d.code} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     <div className="pt-2 sm:pt-4 sticky bottom-0 bg-[#202123]">
