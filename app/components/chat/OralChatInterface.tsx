@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Square, Loader2, Volume2, X } from 'lucide-react';
 import { ChatSettings } from './ChatSettingsModal';
+import { PCMRecorder } from './PCMRecorder';
 
 interface OralChatProps {
     token: string | null;
@@ -15,8 +16,7 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
     const [transcript, setTranscript] = useState<{ role: string, content: string }[]>([]);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<BlobPart[]>([]);
+    const mediaRecorderRef = useRef<PCMRecorder | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const historyRef = useRef<{ role: string, content: string }[]>([]);
     const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -135,60 +135,10 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
                 connect();
             }
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                ? 'audio/webm;codecs=opus'
-                : 'audio/webm';
-            
-            const mediaRecorder = new MediaRecorder(stream, { mimeType });
-            mediaRecorderRef.current = mediaRecorder;
-            chunksRef.current = [];
+            const recorder = new PCMRecorder();
+            await recorder.start();
+            mediaRecorderRef.current = recorder;
 
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunksRef.current.push(e.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                setStatus('processing');
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const arrayBuffer = await blob.arrayBuffer();
-                
-                // Convert to base64 safely
-                const buffer = new Uint8Array(arrayBuffer);
-                let binary = '';
-                for (let i = 0; i < buffer.byteLength; i++) {
-                    binary += String.fromCharCode(buffer[i]);
-                }
-                const base64Audio = btoa(binary);
-
-                // We add a tiny delay to ensure the reconnection (if fired) has time to auth,
-                // but usually the user speaks for at least a few seconds anyway, so it should be OPEN.
-                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(JSON.stringify({
-                        audio_base64: base64Audio,
-                        history: historyRef.current,
-                        settings: settingsToSend
-                    }));
-                } else if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
-                    // Try to wait a tiny bit and send if still connecting
-                    wsRef.current.addEventListener('open', () => {
-                        wsRef.current?.send(JSON.stringify({
-                            audio_base64: base64Audio,
-                            history: historyRef.current,
-                            settings: settingsToSend
-                        }));
-                    }, { once: true });
-                } else {
-                    console.error("WebSocket is not open");
-                    setStatus('idle');
-                    setErrorMsg("Failed to send audio. The connection was lost.");
-                }
-
-                // Release microphone
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
             setIsRecording(true);
             setStatus('recording');
         } catch (err) {
@@ -198,10 +148,39 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
         }
     };
 
-    const stopRecording = () => {
+    const stopRecording = async () => {
         if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
             setIsRecording(false);
+            setStatus('processing');
+            
+            try {
+                const { base64 } = await mediaRecorderRef.current.stop();
+                
+                const payload = {
+                    audio_base64: base64,
+                    history: historyRef.current,
+                    settings: settingsToSend
+                };
+
+                // We add a tiny delay to ensure the reconnection (if fired) has time to auth,
+                // but usually the user speaks for at least a few seconds anyway, so it should be OPEN.
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(JSON.stringify(payload));
+                } else if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+                    // Try to wait a tiny bit and send if still connecting
+                    wsRef.current.addEventListener('open', () => {
+                        wsRef.current?.send(JSON.stringify(payload));
+                    }, { once: true });
+                } else {
+                    console.error("WebSocket is not open");
+                    setStatus('idle');
+                    setErrorMsg("Failed to send audio. The connection was lost.");
+                }
+            } catch (err) {
+                console.error("Failed to process audio", err);
+                setStatus('idle');
+                setErrorMsg("Failed to process recorded audio.");
+            }
         }
     };
 
