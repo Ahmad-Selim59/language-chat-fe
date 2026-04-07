@@ -315,7 +315,7 @@ function ChatWithParams() {
                     <OralChatInterface token={token} currentSettings={currentSettings} />
                 ) : (
                     <>
-                        <ChatMessages messages={messages} onTranslate={handleTranslate} />
+                        <ChatMessages messages={messages} onTranslate={handleTranslate} isTyping={loading} />
                         <div className="relative z-0 shrink-0">
                             <ChatInput
                                 message={message}

@@ -63,7 +63,7 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
                     setTranscript(prev => [...prev, newUserMsg]);
                     historyRef.current = [...historyRef.current, newUserMsg];
                     // Keep status as 'processing' while AI thinks
-                    
+
                     if (transcriptEndRef.current) {
                         transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
                     }
@@ -85,7 +85,7 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
                         }
                     }
                     setStatus('idle');
-                    
+
                     if (transcriptEndRef.current) {
                         transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
                     }
@@ -152,9 +152,10 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
         if (mediaRecorderRef.current && isRecording) {
             setIsRecording(false);
             setStatus('processing');
-            
+
             try {
                 const { base64 } = await mediaRecorderRef.current.stop();
+                console.log("Audio base64 size:", base64.length);
                 
                 const payload = {
                     audio_base64: base64,
@@ -190,8 +191,8 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
             {errorMsg && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3 z-50 backdrop-blur-sm animate-in fade-in slide-in-from-top-4">
                     <span className="text-sm font-medium">{errorMsg}</span>
-                    <button 
-                        onClick={() => setErrorMsg(null)} 
+                    <button
+                        onClick={() => setErrorMsg(null)}
                         className="p-1 hover:bg-red-500/20 rounded transition-colors"
                     >
                         <X className="w-4 h-4" />
@@ -244,7 +245,7 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
 
             {/* Controls Area */}
             <div className="flex-none p-6 border-t border-[#2a2b32] bg-[#202123] flex flex-col items-center justify-center pb-8 gap-4">
-                
+
                 {status === 'processing' ? (
                     <div className="flex flex-col items-center gap-3 text-[#10a37f]">
                         <Loader2 className="w-10 h-10 animate-spin" />
@@ -260,8 +261,8 @@ export default function OralChatInterface({ token, currentSettings }: OralChatPr
                         </button>
                         <div className="flex items-center gap-2 text-red-500 font-medium">
                             <span className="relative flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                             </span>
                             Recording...
                         </div>

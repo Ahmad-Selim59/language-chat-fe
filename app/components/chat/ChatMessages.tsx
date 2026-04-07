@@ -14,14 +14,15 @@ interface Message {
 interface ChatMessagesProps {
     messages: Message[];
     onTranslate?: (index: number) => void;
+    isTyping?: boolean;
 }
 
-export default function ChatMessages({ messages, onTranslate }: ChatMessagesProps) {
+export default function ChatMessages({ messages, onTranslate, isTyping }: ChatMessagesProps) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    }, [messages, isTyping]);
 
     return (
         <div
@@ -30,6 +31,7 @@ export default function ChatMessages({ messages, onTranslate }: ChatMessagesProp
             {messages.length === 0 && (
                 <div className="text-[#a3a3a3] text-center mt-10">Start a new conversation!</div>
             )}
+
             {messages.map((msg, i) => (
                 <div
                     key={i}
@@ -56,6 +58,17 @@ export default function ChatMessages({ messages, onTranslate }: ChatMessagesProp
                     )}
                 </div>
             ))}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+                <div className="flex w-full justify-start">
+                    <div className="bg-[#202c33] p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-[#e9edef] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <div className="w-1.5 h-1.5 bg-[#e9edef] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <div className="w-1.5 h-1.5 bg-[#e9edef] rounded-full animate-bounce" />
+                    </div>
+                </div>
+            )}
             <div ref={bottomRef} />
         </div>
     );

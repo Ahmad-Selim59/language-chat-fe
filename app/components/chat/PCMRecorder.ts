@@ -18,23 +18,27 @@ export class PCMRecorder {
         });
 
         // Use standard or webkit AudioContext
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        this.ac = new AudioContext({ sampleRate: this.targetSampleRate });
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (!AudioCtx) throw new Error("AudioContext not supported");
         
-        this.input = this.ac.createMediaStreamSource(this.stream);
-        this.processor = this.ac.createScriptProcessor(4096, 1, 1);
-        this.pcmData = [];
-        this._isRecording = true;
+        this.ac = new AudioCtx({ sampleRate: this.targetSampleRate });
+        
+        if (this.ac && this.stream) {
+            this.input = this.ac.createMediaStreamSource(this.stream);
+            this.processor = this.ac.createScriptProcessor(4096, 1, 1);
+            this.pcmData = [];
+            this._isRecording = true;
 
-        this.processor.onaudioprocess = (e) => {
-            if (!this._isRecording) return;
-            // Get the raw float32 PCM array
-            const inputData = e.inputBuffer.getChannelData(0);
-            this.pcmData.push(new Float32Array(inputData));
-        };
+            this.processor.onaudioprocess = (e) => {
+                if (!this._isRecording) return;
+                // Get the raw float32 PCM array
+                const inputData = e.inputBuffer.getChannelData(0);
+                this.pcmData.push(new Float32Array(inputData));
+            };
 
-        this.input.connect(this.processor);
-        this.processor.connect(this.ac.destination); 
+            this.input.connect(this.processor);
+            this.processor.connect(this.ac.destination); 
+        }
     }
 
     async stop(): Promise<{ base64: string, sampleRate: number }> {
